@@ -1,0 +1,107 @@
+/* ----- RESET ----- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Inter", sans-serif;
+}
+
+/* ----- BODY ----- */
+body {
+  background: linear-gradient(135deg, #0f0f0f, #1d1d1d);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;   /* CENTRADO HORIZONTAL */
+  align-items: center;       /* CENTRADO VERTICAL */
+  color: #fff;
+}
+
+/* ----- CONTENEDOR PRINCIPAL ----- */
+.container {
+  width: 90%;
+  max-width: 900px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  padding: 30px;
+  border-radius: 18px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ----- TÍTULO ----- */
+.container h1 {
+  text-align: center;
+  margin-bottom: 25px;
+  font-size: 2rem;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+
+/* ----- FORMULARIO ----- */
+.form-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 25px;
+}
+
+input, select {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 10px;
+  border-radius: 10px;
+  outline: none;
+  color: #fff;
+  transition: 0.2s ease-in-out;
+}
+
+input:focus, select:focus {
+  border-color: #4fa3ff;
+  box-shadow: 0 0 8px rgba(79, 163, 255, 0.4);
+}
+
+/* ----- BOTÓN ----- */
+button {
+  width: 100%;
+  padding: 12px;
+  background: #4fa3ff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+button:hover {
+  background: #1e8aff;
+}
+
+/* ----- TABLA ----- */
+.table-box {
+  margin-top: 20px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+th {
+  background: rgba(255, 255, 255, 0.12);
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+}
+
+td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+  transition: 0.2s;
+}

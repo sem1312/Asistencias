@@ -1,15 +1,19 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar";
+import Welcome from "./pages/welcome";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Home from "./pages/Home";
-import Reportes from "./pages/Reportes";
 
 function App() {
   return (
     <BrowserRouter>
-      <Navbar />
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/reportes" element={<Reportes />} />
+        <Route path="/" element={<Welcome />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Solo profesores verán esto después */}
+        <Route path="/home" element={<Home />} />
       </Routes>
     </BrowserRouter>
   );

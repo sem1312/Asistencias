@@ -1,10 +1,17 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Blueprint
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
+from models import Usuario
 
 app = Flask(__name__)
+
+auth = Blueprint("auth", __name__)
+app.register_blueprint(auth)
+
 CORS(app)
+
 
 # Config DB
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -150,6 +157,65 @@ def obtener_asistencias_por_fecha(fecha):
         for a in asistencias
     ])
 
+@app.route("/register", methods=["POST"])
+def register():
+    data = request.get_json()
+
+    nombre = data.get("nombre")
+    email = data.get("email")
+    password = data.get("password")
+    tipo = data.get("tipo")
+
+    if not nombre or not email or not password or not tipo:
+        return jsonify({"error": "Faltan datos"}), 400
+
+    # Verificar si el email ya existe
+    existing = Usuario.query.filter_by(email=email).first()
+    if existing:
+        return jsonify({"error": "El email ya está registrado"}), 400
+
+    hashed_password = generate_password_hash(password)
+
+    nuevo_usuario = Usuario(
+        nombre=nombre,
+        email=email,
+        password=hashed_password,
+        tipo=tipo
+    )
+
+    db.session.add(nuevo_usuario)
+    db.session.commit()
+
+    return jsonify({"message": "Usuario registrado correctamente"})
+
+
+@auth.route("/login", methods=["POST"])
+def login():
+    data = request.json
+
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+        return jsonify({"error": "Faltan datos"}), 400
+
+    usuario = Usuario.query.filter_by(email=email).first()
+
+    if not usuario:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+
+    if not check_password_hash(usuario.password_hash, password):
+        return jsonify({"error": "Contraseña incorrecta"}), 401
+
+    return jsonify({
+        "message": "Login exitoso",
+        "usuario": {
+            "id": usuario.id,
+            "nombre": usuario.nombre,
+            "email": usuario.email,
+            "tipo": usuario.tipo
+        }
+    }), 200
 
 # ==========================
 # RUN SERVER
