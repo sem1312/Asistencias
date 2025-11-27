@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const [form, setForm] = useState({
     email: "",
     password: "",
   });
+
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -25,8 +28,8 @@ export default function Login() {
     alert(data.message || data.error);
 
     if (res.ok) {
-      // Guardás el usuario en localStorage si querés
       localStorage.setItem("usuario", JSON.stringify(data.usuario));
+      navigate("/home");       // ⟵ redirección a Home.jsx
     }
   };
 

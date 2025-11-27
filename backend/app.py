@@ -1,59 +1,26 @@
 from flask import Flask, jsonify, request, Blueprint
-from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import Usuario
+
+from models import db, Usuario, Estudiante, Asistencia
 
 app = Flask(__name__)
+CORS(app)
 
 auth = Blueprint("auth", __name__)
-app.register_blueprint(auth)
-
-CORS(app)
 
 
 # Config DB
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-db = SQLAlchemy(app)
-
-# ==========================
-# MODELOS
-# ==========================
-class Estudiante(db.Model):
-    __tablename__ = "estudiantes"
-
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100), nullable=False)
-    curso = db.Column(db.String(50), nullable=False)
-
-    asistencias = db.relationship("Asistencia", backref="estudiante", lazy=True)
-
-
-class Asistencia(db.Model):
-    __tablename__ = "asistencias"
-
-    id = db.Column(db.Integer, primary_key=True)
-    estudiante_id = db.Column(db.Integer, db.ForeignKey("estudiantes.id"), nullable=False)
-
-    fecha = db.Column(db.Date, default=datetime.utcnow().date)
-    presente = db.Column(db.Boolean, default=True)
-
-    hora_entrada = db.Column(db.Time, nullable=True)
-    hora_salida = db.Column(db.Time, nullable=True)
-
-    observaciones = db.Column(db.String(255), nullable=True)
-    justificacion = db.Column(db.String(255), nullable=True)
-
-    tipo_asistencia = db.Column(db.String(50), nullable=True)
+db.init_app(app)
 
 # ==========================
-# ENDPOINTS
+# ENDPOINTS ESTUDIANTES
 # ==========================
 
-# Obtener todos los estudiantes
 @app.route('/api/estudiantes', methods=['GET'])
 def obtener_estudiantes():
     estudiantes = Estudiante.query.all()
@@ -67,7 +34,6 @@ def obtener_estudiantes():
     ])
 
 
-# Agregar estudiante
 @app.route('/api/estudiantes', methods=['POST'])
 def agregar_estudiante():
     data = request.get_json()
@@ -80,8 +46,10 @@ def agregar_estudiante():
 
     return jsonify({"message": "Estudiante agregado correctamente"}), 201
 
+# ==========================
+# ENDPOINT ASISTENCIAS
+# ==========================
 
-# Registrar asistencia del día
 @app.route('/api/asistencias', methods=['POST'])
 def registrar_asistencia():
     data = request.get_json()
@@ -89,12 +57,15 @@ def registrar_asistencia():
     estudiante_id = data["estudiante_id"]
     presente = data.get("presente", True)
 
-    fecha = datetime.strptime(data.get("fecha"), "%Y-%m-%d").date()
+    try:
+        fecha = datetime.strptime(data.get("fecha"), "%Y-%m-%d").date()
+    except:
+        return jsonify({"error": "Formato de fecha inválido. Use YYYY-MM-DD"}), 400
 
     hora_entrada = data.get("hora_entrada")
     hora_salida = data.get("hora_salida")
 
-    nueva_asistencia = Asistencia(
+    nueva = Asistencia(
         estudiante_id=estudiante_id,
         fecha=fecha,
         presente=presente,
@@ -105,13 +76,12 @@ def registrar_asistencia():
         hora_salida=datetime.strptime(hora_salida, "%H:%M").time() if hora_salida else None
     )
 
-    db.session.add(nueva_asistencia)
+    db.session.add(nueva)
     db.session.commit()
 
     return jsonify({"message": "Asistencia registrada"}), 201
 
 
-# Obtener TODAS las asistencias
 @app.route('/api/asistencias', methods=['GET'])
 def obtener_asistencias():
     asistencias = Asistencia.query.all()
@@ -134,10 +104,13 @@ def obtener_asistencias():
     ])
 
 
-# Obtener asistencias por fecha
 @app.route('/api/asistencias/<fecha>', methods=['GET'])
 def obtener_asistencias_por_fecha(fecha):
-    fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
+    try:
+        fecha_dt = datetime.strptime(fecha, "%Y-%m-%d").date()
+    except:
+        return jsonify({"error": "Formato inválido"}), 400
+
     asistencias = Asistencia.query.filter_by(fecha=fecha_dt).all()
 
     return jsonify([
@@ -157,6 +130,10 @@ def obtener_asistencias_por_fecha(fecha):
         for a in asistencias
     ])
 
+# ==========================
+# REGISTER + LOGIN
+# ==========================
+
 @app.route("/register", methods=["POST"])
 def register():
     data = request.get_json()
@@ -166,27 +143,23 @@ def register():
     password = data.get("password")
     tipo = data.get("tipo")
 
-    if not nombre or not email or not password or not tipo:
+    if not all([nombre, email, password, tipo]):
         return jsonify({"error": "Faltan datos"}), 400
 
-    # Verificar si el email ya existe
-    existing = Usuario.query.filter_by(email=email).first()
-    if existing:
+    if Usuario.query.filter_by(email=email).first():
         return jsonify({"error": "El email ya está registrado"}), 400
 
-    hashed_password = generate_password_hash(password)
-
-    nuevo_usuario = Usuario(
+    nuevo = Usuario(
         nombre=nombre,
         email=email,
-        password=hashed_password,
-        tipo=tipo
+        tipo=tipo,
+        password_hash=generate_password_hash(password)
     )
 
-    db.session.add(nuevo_usuario)
+    db.session.add(nuevo)
     db.session.commit()
 
-    return jsonify({"message": "Usuario registrado correctamente"})
+    return jsonify({"message": "Usuario creado"})
 
 
 @auth.route("/login", methods=["POST"])
@@ -195,9 +168,6 @@ def login():
 
     email = data.get("email")
     password = data.get("password")
-
-    if not email or not password:
-        return jsonify({"error": "Faltan datos"}), 400
 
     usuario = Usuario.query.filter_by(email=email).first()
 
@@ -215,27 +185,15 @@ def login():
             "email": usuario.email,
             "tipo": usuario.tipo
         }
-    }), 200
+    })
+
+app.register_blueprint(auth)
 
 # ==========================
-# RUN SERVER
+# RUN
 # ==========================
-if __name__ == '__main__':
+if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-
-        # ---- CARGA INICIAL DE ESTUDIANTES ----
-        if Estudiante.query.count() == 0:
-            alumnos = [
-                Estudiante(nombre="Patricio Gallo Dillon", curso="7P"),
-                Estudiante(nombre="Fabricio Fernando Silveyra", curso="7P"),
-                Estudiante(nombre="Lautaro Cuesta", curso="7P"),
-                Estudiante(nombre="Ismael Medrano", curso="7P"),
-            ]
-            db.session.add_all(alumnos)
-            db.session.commit()
-            print("✔ Estudiantes cargados exitosamente")
-        else:
-            print("✔ Estudiantes ya existen (no se vuelven a cargar)")
 
     app.run(debug=True)
